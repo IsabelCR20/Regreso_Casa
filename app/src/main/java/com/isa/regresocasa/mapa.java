@@ -6,6 +6,7 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -15,6 +16,12 @@ import android.os.CancellationSignal;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.api.internal.ConnectionCallbacks;
 import com.google.android.gms.common.api.internal.OnConnectionFailedListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -25,12 +32,16 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import org.json.JSONObject;
+
 public class mapa extends FragmentActivity implements OnMapReadyCallback {
     private static final int REQUEST_LOCATION = 1;
     LocationManager locationManager;
     private GoogleMap mMap;
     double possition[] = new double[2];
     boolean firstPossition;     // Bandera para marcar por primera vez la posición incial
+    String destinoAdd;
+    RequestQueue colaS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +52,7 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         firstPossition = false;
-        otro();
+        currentLocation();
     }
 
     /**
@@ -65,7 +76,7 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
 
 
 
-    private void otro(){
+    private void currentLocation(){
         if (ActivityCompat.checkSelfPermission(
                 getBaseContext(),Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
                 getBaseContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -83,6 +94,8 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
                         mMap.moveCamera(CameraUpdateFactory.newLatLng(fp));
                         firstPossition = true;
                         Log.d("cosa", "UPDATES Latitud: " + possition[0] + "  Longitud: " + possition[1]);
+                        // Obtenciòn de direccion destino
+                        determinaRuta();
                     }
                 }
                 @Override
@@ -95,6 +108,56 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
                 public void onStatusChanged(String provider, int status, Bundle extras) { }
             });
         }
+    }
+
+    private String getDestino(){
+        SharedPreferences sharedPref = getSharedPreferences
+                (getPackageName()+"_preferences", getBaseContext().MODE_PRIVATE);
+        String add = "";
+        for(String word : sharedPref.getString("addressOrigen", "NULL").split(" ")){
+            add += word + "%20";
+        }
+
+        return add.substring(0, add.length()-3);
+    }
+
+    private void determinaRuta(){
+        // Obtención de destino configurado en preferencias
+        destinoAdd = getDestino();
+        // Definición de solicitud
+        String formato = "json";
+        String origin = "origin=" + possition[0]+","+possition[1];
+        String destination = "destination=" + destinoAdd;
+        String api = "AIzaSyAGM-1DeLXFEFnmEAZviEV8wcK8NLHuErA";
+        String request = "https://maps.googleapis.com/maps/api/directions/json?"+ origin+"&"+ destination +"&key="+api;
+        Log.d("cosa", "Valor en String api: " + api);
+        Log.d("cosa", "solicitud: " + request);
+        // Llamada con Volley
+        colaS = Volley.newRequestQueue(getBaseContext());
+        JsonObjectRequest solicitudJson = new JsonObjectRequest(Request.Method.GET, request, null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d("cosa", "JSON:    " + response.toString());
+                        try{
+                            if(response.getJSONObject("routes").length() > 0){
+                                Log.d("cosa", "hay rutas :D");
+                            } else {
+                                Toast.makeText(getBaseContext(), "Fallo al obtener direcciones de ruta.", Toast.LENGTH_LONG).show();
+                            }
+                        } catch (Exception e){
+
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(getBaseContext(), "Fallo al enviar petición. " + error.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
+        colaS.add(solicitudJson);
+        
     }
 }
 
