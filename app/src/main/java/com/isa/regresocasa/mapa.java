@@ -90,7 +90,7 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
                         possition[0] = location.getLatitude();
                         possition[1] = location.getLongitude();
                         LatLng fp = new LatLng(possition[0], possition[1]);
-                        mMap.addMarker(new MarkerOptions().position(fp).title("Ubicación actual"));
+                        //mMap.addMarker(new MarkerOptions().position(fp).title("Ubicación actual"));
                         mMap.moveCamera(CameraUpdateFactory.newLatLng(fp));
                         firstPossition = true;
                         Log.d("cosa", "UPDATES Latitud: " + possition[0] + "  Longitud: " + possition[1]);
@@ -121,9 +121,14 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
         return add.substring(0, add.length()-3);
     }
 
+
     private void determinaRuta(){
         // Obtención de destino configurado en preferencias
         destinoAdd = getDestino();
+        String origen = possition[0]+","+possition[1];
+        Log.d("cosa", "Realizción de tarea ruta");
+        new TareaRuta(getBaseContext(), mMap, origen, destinoAdd).execute();
+        /*
         // Definición de solicitud
         String formato = "json";
         String origin = "origin=" + possition[0]+","+possition[1];
@@ -142,6 +147,7 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
                         try{
                             if(response.getJSONObject("routes").length() > 0){
                                 Log.d("cosa", "hay rutas :D");
+
                             } else {
                                 Toast.makeText(getBaseContext(), "Fallo al obtener direcciones de ruta.", Toast.LENGTH_LONG).show();
                             }
@@ -157,7 +163,7 @@ public class mapa extends FragmentActivity implements OnMapReadyCallback {
                     }
                 });
         colaS.add(solicitudJson);
-        
+        */
     }
 }
 
